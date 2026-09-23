@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>TangyiCam</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TangyiCam">
+<meta name="theme-color" content="#000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<section id="pairing" class="pair-screen" aria-labelledby="pair-title">
+  <form id="pair-form" class="pair-card"><p>TANGYICAM</p><h1 id="pair-title">連接你的 Blender</h1>
+    <label for="pair-code">電腦顯示的 6 位配對碼</label><input id="pair-code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+    <button id="pair-submit" type="submit">配對攝影機</button><p id="pair-error" role="status">正在確認配對狀態…</p><a href="/help">第一次使用／連線說明</a>
+  </form>
+</section>
+<div id="stage">
+  <img id="view" alt="">
+  <div id="noview">等待 Blender 畫面…</div>
+
+  <!-- 上方 HUD -->
+  <div id="hud-top">
+    <div id="shotcard" class="card">
+      <div id="shot-id">—</div>
+      <div id="shot-meta">未選鏡</div>
+    </div>
+    <div id="rec-ind" class="card hidden"><span class="dot"></span><span id="rec-text">REC</span><span id="remain"></span></div>
+    <div id="status" class="card">
+      <span id="conn">連線中</span> · <span id="fps">–</span> fps · <span id="lens">–</span>mm · <span id="gyro">陀螺儀關</span><span id="shell"></span>
+    </div>
+  </div>
+
+  <!-- 左搖桿：推軌 / 橫移 -->
+  <div id="stick-l" class="stick"><div class="knob"></div><div class="lbl">移動</div></div>
+  <!-- 右搖桿：升降 / 變焦 -->
+  <div id="stick-r" class="stick"><div class="knob"></div><div class="lbl">升降｜變焦</div></div>
+
+  <!-- 右側按鈕列 -->
+  <div id="rail">
+    <button id="btn-rec" class="big">●</button>
+    <button id="btn-recenter">歸零</button>
+    <button id="btn-home">起點</button>
+    <button id="btn-boost" class="toggle">×2</button>
+    <button id="btn-slow" class="hold">慢</button>
+    <button id="btn-shots">鏡表</button>
+    <button id="btn-menu">設定</button>
+  </div>
+
+  <!-- 下方：穩定器檔位 -->
+  <div id="hud-bottom">
+    <div class="card row" id="stab-row">
+      <span class="lbl2">穩定器</span>
+      <button class="chip" data-stab="0">關</button>
+      <button class="chip" data-stab="1">1</button>
+      <button class="chip" data-stab="2">2</button>
+      <button class="chip" data-stab="3">3</button>
+      <button class="chip" data-stab="4">4</button>
+      <button class="chip" data-stab="5">5</button>
+      <button class="chip" id="btn-horizon">水平鎖</button>
+    </div>
+    <div class="card row" id="lens-row">
+      <span class="lbl2">焦段</span>
+      <button class="chip" data-lens="18">18</button>
+      <button class="chip" data-lens="24">24</button>
+      <button class="chip" data-lens="35">35</button>
+      <button class="chip" data-lens="50">50</button>
+      <button class="chip" data-lens="85">85</button>
+      <button class="chip" data-lens="100">100</button>
+      <button class="chip" data-lens="135">135</button>
+    </div>
+  </div>
+
+  <!-- 機位關鍵影格列（選了鏡才顯示） -->
+  <div id="keyrow" class="card hidden">
+    <button class="chip" id="btn-key-prev">◀</button>
+    <div id="scrubwrap"><div id="keyticks"></div><input type="range" id="scrub" min="0" max="1" step="0.001" value="0"></div>
+    <button class="chip" id="btn-key-next">▶</button>
+    <span class="kv">格 <b id="frame-v">–</b></span>
+    <button class="chip key" id="btn-key-add">＋機位</button>
+    <button class="chip" id="btn-key-del">刪</button>
+    <button class="chip build" id="btn-key-build">串接</button>
+    <button class="chip" id="btn-key-export">mp4</button>
+    <span class="kv small">機位 <b id="keys-v">—</b></span>
+  </div>
+  <div id="msg"></div>
+
+  <!-- 鏡表抽屜 -->
+  <div id="drawer" class="hidden">
+    <div class="drawer-head"><span>鏡表</span><button id="btn-drawer-close">✕</button></div>
+    <div id="shot-list"></div>
+  </div>
+
+  <!-- 設定 -->
+  <div id="menu" class="hidden">
+    <div class="drawer-head"><span>設定</span><button id="btn-menu-close">✕</button></div>
+    <div class="menu-body">
+      <div class="row"><span>移動模式</span>
+        <button class="chip" data-mode="WALK">步行</button>
+        <button class="chip" data-mode="FPV">FPV</button>
+        <button class="chip" data-mode="DOLLY">軌道</button></div>
+      <div class="row"><span>預覽著色</span>
+        <button class="chip" data-shade="SOLID">實體</button>
+        <button class="chip" data-shade="MATERIAL">材質</button>
+        <button class="chip" data-shade="RENDERED">渲染</button>
+        <button class="chip" data-shade="WIREFRAME">線框</button></div>
+      <div class="row"><span>移動速度</span><input type="range" id="speed" min="0.3" max="4" step="0.1" value="1"><b id="speed-v">×1.0</b></div>
+      <div class="row"><span>慢動作倍率</span><input type="range" id="slow" min="0.1" max="0.5" step="0.05" value="0.25"><b id="slow-v">×0.25</b></div>
+      <div class="row"><span>轉向倍率</span><input type="range" id="gain" min="1" max="2.5" step="0.1" value="1"><b id="gain-v">×1.0</b></div>
+      <div class="row"><span>陀螺儀</span>
+        <button class="chip" id="btn-gyro-on">啟用</button>
+        <button class="chip" id="btn-gyro-off">關閉</button></div>
+      <div class="row"><span>搖桿</span>
+        <button class="chip" id="btn-swap">左右對調</button></div>
+      <button id="btn-unpair" type="button">解除配對</button>
+      <div class="row small" id="diag">—</div>
+    </div>
+  </div>
+
+  <!-- 第一次進來：啟用陀螺儀（iOS 一定要按一下才能要權限） -->
+  <div id="gate">
+    <div class="gate-card">
+      <h1>TangyiCam</h1>
+      <p>手機橫放。按下面的按鈕啟用陀螺儀——手機轉到哪、相機看到哪。</p>
+      <button id="btn-gate">啟用陀螺儀並開始</button>
+      <button id="btn-gate-nogyro" class="ghost">不用陀螺儀，只用搖桿</button>
+    </div>
+  </div>
+  <div id="rotate"><div>請把手機橫放<br><small>（若開了方向鎖定，先到控制中心關掉）</small></div><button id="btn-rotate-skip">直放也要用，繼續</button></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
+
+<!-- PATCH_V02_DONE -->
+
+<!-- PATCH_V02B_DONE -->

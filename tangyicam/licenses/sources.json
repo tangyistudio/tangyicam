@@ -1,0 +1,44 @@
+[
+  {
+    "file": "bin/mkcert.exe",
+    "url": "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-windows-amd64.exe",
+    "sha256": "d2660b50a9ed59eada480750561c96abc2ed4c9a38c6a24d93e30e0977631398",
+    "size": 4896256,
+    "publisher_checksum_verified": true
+  },
+  {
+    "file": "licenses/mkcert-LICENSE.txt",
+    "url": "https://raw.githubusercontent.com/FiloSottile/mkcert/v1.4.4/LICENSE",
+    "sha256": "26c2246f9f611783b409f51bac7cc6124a26c943971c14742961bedabe2ef90a",
+    "size": 1483,
+    "publisher_checksum_verified": false
+  },
+  {
+    "file": "web/vendor/qrcode.min.js",
+    "url": "https://raw.githubusercontent.com/davidshimjs/qrcodejs/04f46c6a0708418cb7b96fc563eacae0fbf77674/qrcode.min.js",
+    "sha256": "c541ef06327885a8415bca8df6071e14189b4855336def4f36db54bde8484f36",
+    "size": 19927,
+    "publisher_checksum_verified": false
+  },
+  {
+    "file": "licenses/qrcodejs-LICENSE.txt",
+    "url": "https://raw.githubusercontent.com/davidshimjs/qrcodejs/04f46c6a0708418cb7b96fc563eacae0fbf77674/LICENSE",
+    "sha256": "aaa1f349028a59432eb00222b8ddfe4d2ccebdce04cf8348dcb8d41b7068107b",
+    "size": 1098,
+    "publisher_checksum_verified": false
+  },
+  {
+    "file": "licenses/threejs-LICENSE.txt",
+    "url": "https://raw.githubusercontent.com/mrdoob/three.js/dev/LICENSE",
+    "sha256": "8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc",
+    "size": 1081,
+    "publisher_checksum_verified": false
+  },
+  {
+    "file": "LICENSE.txt",
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/main/text/GPL-3.0-or-later.txt",
+    "sha256": "fb981668c18a279e285fc4d83fba1e836cc84dd4daa73c9697d3cfd2d8aca6e0",
+    "size": 34674,
+    "publisher_checksum_verified": false
+  }
+]

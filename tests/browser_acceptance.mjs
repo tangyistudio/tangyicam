@@ -1,0 +1,86 @@
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {readFileSync,writeFileSync,mkdirSync,mkdtempSync,existsSync} from 'node:fs';
+import {join,resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
+const out=join(root,'dist','browser-qa',new Date().toISOString().replace(/[:.]/g,'-'));mkdirSync(out,{recursive:true});
+const session=join(out,'session.json');
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+const server=spawn(process.env.PYTHON||'python',[join(root,'tests','browser_server.py'),'--session',session,...(process.argv[2]?['--image',process.argv[2]]:[])],{windowsHide:true,stdio:['pipe','pipe','pipe']});
+let serverLog='';server.stdout.on('data',x=>serverLog+=x);server.stderr.on('data',x=>serverLog+=x);
+let browser,socket;const events=[],passed=[];
+try{
+  for(let i=0;i<100&&!existsSync(session);i++)await delay(100);
+  assert.ok(existsSync(session),serverLog);
+  const data=JSON.parse(readFileSync(session,'utf8'));
+  const profile=mkdtempSync(join(out,'chrome-'));
+  browser=spawn(process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--disable-gpu','--no-proxy-server','--disable-background-networking','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{windowsHide:true,stdio:'ignore'});
+  const portFile=join(profile,'DevToolsActivePort');
+  for(let i=0;i<150&&!existsSync(portFile);i++)await delay(100);
+  const port=readFileSync(portFile,'utf8').split('\n')[0];
+  const version=await(await fetch(`http://127.0.0.1:${port}/json/version`)).json();
+  socket=new WebSocket(version.webSocketDebuggerUrl);await new Promise((r,j)=>{socket.onopen=r;socket.onerror=j;});
+  let serial=0;const pending=new Map();
+  socket.onmessage=event=>{const m=JSON.parse(event.data);if(m.id){const p=pending.get(m.id);if(!p)return;clearTimeout(p.timer);pending.delete(m.id);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result);}else events.push(m);};
+  function send(method,params={},sessionId){const id=++serial;return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(id);reject(Error('CDP timeout '+method));},15000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params,...(sessionId?{sessionId}:{})}));});}
+  const targets=await send('Target.getTargets');const target=targets.targetInfos.find(t=>t.type==='page');
+  const {sessionId}=await send('Target.attachToTarget',{targetId:target.targetId,flatten:true});const call=(m,p={})=>send(m,p,sessionId);
+  const evaluate=async expression=>{const r=await call('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
+  async function waitFor(expression){for(let i=0;i<100;i++){if(await evaluate(expression))return;await delay(100);}writeFileSync(join(out,'failure.txt'),await evaluate("document.body?.innerText||''"));throw Error('Timeout '+expression);}
+  const screenshot=async name=>{const s=await call('Page.captureScreenshot',{format:'png'});writeFileSync(join(out,name+'.png'),Buffer.from(s.data,'base64'));};
+  function pass(name){passed.push(name);console.log('PASS',name);}
+  await call('Page.enable');await call('Runtime.enable');await call('Network.enable');await call('Log.enable');
+  // This trust bypass is scoped to the isolated automated test browser, never the user's profile.
+  await call('Security.setIgnoreCertificateErrors',{ignore:true});
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await call('Page.navigate',{url:data.base+'/'});
+  await waitFor("document.querySelector('#pair-error')?.textContent.includes('輸入電腦')");
+  assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'));
+  await screenshot('pairing-portrait');pass('unpaired mobile screen and portrait layout');
+  const wrong=data.code==='000000'?'111111':'000000';
+  await evaluate(`document.querySelector('#pair-code').value=${JSON.stringify(wrong)};document.querySelector('#pair-form').requestSubmit()`);
+  await waitFor("document.querySelector('#pair-error').textContent.includes('不正確')");pass('invalid pairing code displays recovery message');
+  await evaluate(`document.querySelector('#pair-code').value=${JSON.stringify(data.code)};document.querySelector('#pair-form').requestSubmit()`);
+  await waitFor("document.querySelector('#conn').textContent==='已連線'");
+  assert.equal(await evaluate("document.cookie.includes('tc_session')"),false);
+  await call('Emulation.setDeviceMetricsOverride',{width:852,height:393,deviceScaleFactor:1,mobile:true});
+  await evaluate("DeviceOrientationEvent.requestPermission=async()=> 'denied';document.querySelector('#btn-gate').click()");await delay(100);
+  assert.equal(await evaluate("document.querySelector('#gate').classList.contains('hidden')"),false);pass('denied gyro permission preserves user choice');
+  await evaluate("document.querySelector('#btn-gate-nogyro').click()");
+  if(process.argv[2])await waitFor("document.querySelector('#view').naturalWidth>0");
+  await screenshot('controller-landscape');pass('TLS pairing, HttpOnly cookie and real WebSocket preview');
+  await evaluate("document.querySelector('#btn-rec').click()");
+  await waitFor("document.querySelector('#btn-rec').classList.contains('on')");await delay(500);
+  let commands=JSON.parse(readFileSync(session+'.messages.json','utf8')).commands;assert.equal(commands.filter(x=>x===true).length,1);pass('record sends once and displays authoritative telemetry');
+  await evaluate("window.dispatchEvent(new Event('blur'))");await waitFor("!document.querySelector('#btn-rec').classList.contains('on')");pass('focus loss stops recording');
+  await evaluate("document.querySelector('#btn-shots').click()");await waitFor("document.querySelector('#shot-list .shot')");
+  assert.equal(await evaluate("document.querySelectorAll('#shot-list img').length"),0);
+  assert.ok(await evaluate("document.querySelector('#shot-list').textContent.includes('<img')"));pass('shot names render as text, never HTML');
+  await evaluate("document.querySelector('#shot-list .shot').click()");await waitFor("!document.querySelector('#keyrow').classList.contains('hidden')");
+  await call('Emulation.setDeviceMetricsOverride',{width:667,height:375,deviceScaleFactor:1,mobile:true});
+  assert.ok(await evaluate("[...document.querySelector('#keyrow').children].filter(e=>getComputedStyle(e).display!=='none').every(e=>e.getBoundingClientRect().right<=innerWidth && e.getBoundingClientRect().left>=0)"));
+  await screenshot('selected-shot-small-landscape');pass('selected-shot controls fit a small landscape phone');
+  await evaluate("document.querySelector('#btn-swap').click()");
+  await waitFor("document.querySelector('#conn')?.textContent==='已連線' && localStorage.getItem('tc.swap')==='1'");pass('swap preference persists through reload and reconnect');
+  await evaluate("document.querySelector('#btn-unpair').click()");await waitFor("!document.querySelector('#pairing').classList.contains('hidden')");
+  assert.equal(await evaluate("fetch('/state').then(r=>r.status)"),401);pass('unpair revokes actual server session');
+  await call('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});
+  await call('Page.navigate',{url:data.http+'/qr'});await waitFor("document.querySelector('#qr-app img')?.src.startsWith('data:')");
+  await screenshot('desktop-pairing');pass('offline QR creation and computer-only pairing information');
+  await call('Page.navigate',{url:data.http+'/help'});await waitFor("document.querySelector('#fingerprint')?.textContent.length>30");
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await screenshot('iphone-help');
+  assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'));pass('iPhone setup guide fits portrait viewport');
+  const errors=events.filter(e=>e.method==='Runtime.exceptionThrown');
+  const cspErrors=events.filter(e=>e.method==='Log.entryAdded'&&/Content Security Policy|violates/.test(e.params.entry.text));
+  assert.equal(errors.length,0,JSON.stringify(errors));assert.equal(cspErrors.length,0,JSON.stringify(cspErrors));
+  const foreign=events.filter(e=>e.method==='Network.requestWillBeSent'&&/^https?:/.test(e.params.request.url)&& !e.params.request.url.startsWith(data.base+'/')&&!e.params.request.url.startsWith(data.http+'/'));
+  assert.equal(foreign.length,0,'No third-party browser requests');pass('no runtime exceptions, CSP violations or external requests');
+  await send('Browser.close');
+}finally{
+  writeFileSync(join(out,'results.json'),JSON.stringify({passed,complete:passed.length===13,iphoneHardwareTest:'pending'},null,2));
+  writeFileSync(join(out,'server.log'),serverLog);
+  writeFileSync(join(out,'events.json'),JSON.stringify(events.filter(e=>['Runtime.exceptionThrown','Log.entryAdded','Network.loadingFailed'].includes(e.method)),null,2));
+  socket?.close();browser?.kill();server.stdin.end('\n');
+  console.log('BROWSER_QA_DIRECTORY',out);
+}

@@ -1,0 +1,23 @@
+schema_version = "1.0.0"
+
+id = "tangyicam"
+version = "0.4.0"
+name = "TangyiCam"
+tagline = "Phone-driven camera, shot recording and local scene tools"
+maintainer = "Tangyi Studio <xianlin@tangyi.mx>"
+type = "add-on"
+website = "https://workshop.tangyi.mx"
+tags = ["Camera", "Animation"]
+
+blender_version_min = "4.5.0"
+license = ["SPDX:GPL-3.0-or-later"]
+platforms = ["windows-x64"]
+
+wheels = [
+  "./wheels/pillow-12.3.0-cp311-cp311-win_amd64.whl",
+  "./wheels/pillow-12.3.0-cp313-cp313-win_amd64.whl",
+]
+
+[permissions]
+network = "Pairs a phone and streams camera previews on the local network"
+files = "Reads local assets and writes scenes, recordings and renders"

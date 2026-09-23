@@ -1,0 +1,12 @@
+dist/
+__pycache__/
+*.pyc
+*.pem
+*.key
+*.pfx
+.env*
+certs/
+private-ca/
+*.blend*
+*.mp4
+chrome-*/

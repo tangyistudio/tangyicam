@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TangyiCam｜iPhone 首次設定</title><link rel="stylesheet" href="/setup.css"></head><body><main class="narrow">
+<p class="eyebrow">TANGYICAM · 第一次連線</p><h1>讓 iPhone 安全連到這台電腦</h1><p>請使用 Safari，並與電腦連到同一個私人 Wi-Fi。</p>
+<section><h2>1. 下載這台電腦的公開根憑證</h2><a class="button" href="/ca.pem">下載 TangyiCam 憑證</a><p>允許下載描述檔。只信任自己的電腦；根憑證是一項信任設定，不是僅限本網站的權限。</p><details><summary>核對 SHA-256</summary><code id="fingerprint"></code><p>與電腦 QR 頁顯示的指紋相同才繼續。</p></details></section>
+<section><h2>2. 在 iPhone 安裝並信任</h2><ol><li>設定 → 已下載描述檔 → 安裝。若未顯示，查看「一般 → VPN 與裝置管理」。</li><li>設定 → 一般 → 關於 → 憑證信任設定。</li><li>啟用剛才安裝的 mkcert 根憑證完整信任。</li></ol><p>如果公司管理的手機禁止安裝憑證，請改用允許此設定的裝置。</p></section>
+<section><h2>3. 配對與開始運鏡</h2><a class="button" id="go" href="#">開啟攝影機</a><p>輸入電腦上的 6 位配對碼，再按「啟用陀螺儀」並允許。關閉直向鎖定，把手機橫放。</p><p>切到背景會停止移動並中斷控制；回到畫面後重新連線，需要時按「歸零」。</p></section>
+<details><summary>連不上時</summary><ul><li>確認電腦與手機在同一 Wi-Fi；訪客網路可能隔離裝置。</li><li>Windows 防火牆只允許 Blender 在私人網路連線，不要開放公用網路。</li><li>電腦 IP 變更：停止服務，按「首次設定／更新憑證」，再啟動並重掃 QR。</li><li>憑證警告：回到第 2 步檢查完整信任，不要略過警告。</li></ul></details>
+<details><summary>不用時如何移除</summary><p>停止 Blender 手機攝影機。iPhone 設定 → 一般 → VPN 與裝置管理，移除所安裝的 mkcert 描述檔。移除 Blender 擴充不會自動刪除你的影片與設定。</p></details>
+<details><summary>Android</summary><p>可在系統安全性設定匯入 CA 憑證後使用 Chrome；實際選單依品牌而異。此版本尚未完成 Android 真機驗收。</p></details>
+</main><script src="/help.js"></script></body></html>

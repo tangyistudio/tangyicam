@@ -1,0 +1,10 @@
+{
+  "name": "TangyiCam",
+  "short_name": "TangyiCam",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "start_url": "./",
+  "icons": []
+}
