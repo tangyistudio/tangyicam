@@ -1,7 +1,7 @@
 import {spawn} from 'node:child_process';import {createServer} from 'node:http';import {readFileSync,writeFileSync,existsSync,mkdirSync,mkdtempSync} from 'node:fs';import {join,resolve,extname,sep} from 'node:path';import {fileURLToPath} from 'node:url';import {tmpdir} from 'node:os';import assert from 'node:assert/strict';
 const root=fileURLToPath(new URL('../',import.meta.url)),docs=join(root,'docs'),out=process.env.QA_OUT||join(root,'dist','demo-qa');mkdirSync(out,{recursive:true});
 let server;let base=process.env.DEMO_URL;
-if(!base){server=createServer((req,res)=>{const part=decodeURIComponent(new URL(req.url,'http://localhost').pathname),path=resolve(docs,'.'+(part==='/'?'/index.html':part));if(!path.startsWith(docs+sep)){res.writeHead(403).end();return;}try{res.setHeader('Content-Type',({'.html':'text/html; charset=utf-8','.mjs':'text/javascript','.css':'text/css','.jpg':'image/jpeg','.png':'image/png'})[extname(path)]||'application/octet-stream');res.end(readFileSync(path));}catch{res.writeHead(404).end();}});await new Promise(r=>server.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+server.address().port;}
+if(!base){server=createServer((req,res)=>{const part=decodeURIComponent(new URL(req.url,'http://localhost').pathname),path=resolve(docs,'.'+(part.endsWith('/')?part+'index.html':part));if(!path.startsWith(docs+sep)){res.writeHead(403).end();return;}try{res.setHeader('Content-Type',({'.html':'text/html; charset=utf-8','.mjs':'text/javascript','.css':'text/css','.jpg':'image/jpeg','.png':'image/png'})[extname(path)]||'application/octet-stream');res.end(readFileSync(path));}catch{res.writeHead(404).end();}});await new Promise(r=>server.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+server.address().port;}
 base=base.replace(/\/$/,'');const profile=mkdtempSync(join(tmpdir(),'tangyicam-demo-qa-'));
 const chrome=process.env.CHROME_PATH||(process.platform==='win32'?'C:/Program Files/Google/Chrome/Application/chrome.exe':'/usr/bin/google-chrome');
 const proc=spawn(chrome,['--headless=new','--use-gl=angle','--use-angle=swiftshader','--no-proxy-server','--disable-background-networking','--no-first-run','--no-default-browser-check','--remote-debugging-port=0','--user-data-dir='+profile,...(process.platform==='linux'?['--no-sandbox']:[]),'about:blank'],{windowsHide:true,stdio:['ignore','ignore','pipe']});
@@ -40,10 +40,18 @@ try {
  const click=selector=>evaluate('document.querySelector('+JSON.stringify(selector)+').click()');
  const rect=selector=>evaluate('(()=>{const e=document.querySelector('+JSON.stringify(selector)+');e.scrollIntoView({block:"center",behavior:"instant"});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height}})()');
  const mouse=(type,x,y)=>call('Input.dispatchMouseEvent',{type,x,y,button:'left',buttons:type==='mouseReleased'?0:1,clickCount:1});
+ const languages=[['zh-Hant',''],['en','en/'],['ja','ja/'],['zh-Hans','zh-cn/']];
+ for(const [locale,route] of languages){
+ const copy=JSON.parse(readFileSync(join(root,'site','locales',locale+'.json'),'utf8'));
  for(const width of [1440,1061,768,390,320]){
   await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<600});
   await call('Emulation.setTouchEmulationEnabled',{enabled:width<600});
-  await call('Page.navigate',{url:base+'/'});await wait('!!window.tangyiDemo');await sleep(100);
+  await call('Page.navigate',{url:base+'/'+route});await wait('!!window.tangyiDemo');await sleep(100);
+  assert.equal(await evaluate('document.documentElement.lang'),locale);
+  assert.equal(await evaluate('document.title'),copy['meta.title']);
+  assert.equal(await evaluate('document.querySelector("link[rel=canonical]").href'),'https://tangyistudio.github.io/tangyicam/'+route);
+  assert.equal(await evaluate('document.querySelectorAll("link[hreflang]").length'),5);
+  assert.equal(await evaluate('document.querySelector("#record").textContent'),copy['control.record']);
   assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth+1'),false);
   const phone=await evaluate('(()=>{const p=document.querySelector(".phone"),r=p.getBoundingClientRect();return {width:r.width,height:r.height,overflow:p.scrollHeight>p.clientHeight+1||p.scrollWidth>p.clientWidth+1}})()');
   assert(phone.width/phone.height>1.9,'phone must remain landscape: '+JSON.stringify(phone));assert.equal(phone.overflow,false);
@@ -51,7 +59,7 @@ try {
   if(width<600){await call('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:c.x,y:c.y}]});await call('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:c.x+35,y:c.y-10}]});await call('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
   else{await mouse('mousePressed',c.x,c.y);await mouse('mouseMoved',c.x+50,c.y-10);await mouse('mouseReleased',c.x+50,c.y-10);}
   assert.notEqual((await state()).camera.yaw,start.camera.yaw);
-  await click('#reset');await click('#record');const pad=await rect('#joystick');
+  await click('#reset');await click('#record');assert.equal(await evaluate('document.querySelector("#status").textContent'),copy['status.recording']);const pad=await rect('#joystick');
   if(width<600){await call('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:pad.x,y:pad.y}]});await call('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:pad.x,y:pad.y-30}]});}
   else{await mouse('mousePressed',pad.x,pad.y);await mouse('mouseMoved',pad.x,pad.y-30);}
   await sleep(280);const moving=await state();assert(moving.camera.z<start.camera.z);
@@ -64,9 +72,19 @@ try {
   await click('#reset');await evaluate('document.querySelector("#scene").focus()');await call('Input.dispatchKeyEvent',{type:'keyDown',key:'w',code:'KeyW'});await sleep(100);assert((await state()).camera.z<start.camera.z);
   await evaluate('window.dispatchEvent(new Event("blur"))');const blur=await state();await sleep(80);assert.equal((await state()).camera.z,blur.camera.z);await call('Input.dispatchKeyEvent',{type:'keyUp',key:'w',code:'KeyW'});
   await click('#reset');await rect('#scene');await sleep(80);
-  const shot=await call('Page.captureScreenshot',{format:'png'});writeFileSync(join(out,'demo-'+width+'.png'),Buffer.from(shot.data,'base64'));
-  await evaluate('document.querySelector("#qa").scrollIntoView();document.querySelector("details").open=true');assert(await evaluate('document.querySelector("details").open'));assert.equal(await evaluate('document.querySelectorAll("details").length'),11);
-  results.push({width,touch:width<600,drag:true,joystick:true,cancelStops:true,focal:true,recordReplay:true,blurStops:true,keyboard:true,faqCount:11,phoneAspect:phone.width/phone.height,overflow:false});console.log('DEMO_BROWSER_PASS',width);
+  const shot=await call('Page.captureScreenshot',{format:'png'});writeFileSync(join(out,'demo-'+locale+'-'+width+'.png'),Buffer.from(shot.data,'base64'));
+  await click('.faq-link');await sleep(80);await evaluate('document.querySelector("#qa details").open=true');assert(await evaluate('document.querySelector("#qa details").open'));assert.equal(await evaluate('document.querySelectorAll("#qa details").length'),11);
+  assert(await evaluate('document.querySelector("#qa h2").getBoundingClientRect().top>=document.querySelector(".nav").getBoundingClientRect().bottom'));
+  await click('.language-menu summary');
+  const menu=await evaluate('(()=>{const r=document.querySelector(".language-options").getBoundingClientRect();return {left:r.left,right:r.right,viewport:innerWidth}})()');assert(menu.left>=0&&menu.right<=menu.viewport,'language menu stays onscreen');
+  const next=languages[(languages.findIndex(l=>l[0]===locale)+1)%languages.length][0];
+  await click('.language-options a[lang="'+next+'"]');await wait('document.documentElement.lang==='+JSON.stringify(next)+' && !!window.tangyiDemo');
+  assert.equal(await evaluate('location.hash'),'#qa');assert.equal(await evaluate('document.querySelector(".language-options a[aria-current=page]").lang'),next);
+  // Verify URL-based language selection also survives a direct reload.
+  await call('Page.reload');await wait('document.documentElement.lang==='+JSON.stringify(next)+' && !!window.tangyiDemo');
+
+  results.push({locale,width,languageSwitch:true,touch:width<600,drag:true,joystick:true,cancelStops:true,focal:true,recordReplay:true,blurStops:true,keyboard:true,faqCount:11,phoneAspect:phone.width/phone.height,overflow:false});console.log('DEMO_BROWSER_PASS',locale,width);
+ }
  }
  if(process.env.DEMO_CAPTURE==='1'){
   await call('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});await call('Emulation.setTouchEmulationEnabled',{enabled:false});
@@ -96,13 +114,27 @@ try {
  console.log('DEMO_RENDERING_PASS',rendering.results.join(', '));
  // Exercise the real UI when WebGL is unavailable, without changing user settings.
  const injection=await call('Page.addScriptToEvaluateOnNewDocument',{source:`const originalGetContext=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return type==='webgl'?null:originalGetContext.call(this,type,...args);};`});
- await call('Page.navigate',{url:base+'/'});await wait('!!window.tangyiDemo');
+ for(const [locale,route] of languages){
+ await call('Page.navigate',{url:base+'/'+route});await wait('!!window.tangyiDemo');
  assert.equal((await state()).renderer,'unavailable');
+ const copy=JSON.parse(readFileSync(join(root,'site','locales',locale+'.json'),'utf8'));
+ assert.equal(await evaluate('document.querySelector("#render-message").textContent'),copy['render.unavailable']);
  assert(await evaluate('!document.querySelector("#render-fallback").hidden && !!document.querySelector("#render-fallback a").hash'));
  assert(await evaluate('[...document.querySelectorAll(".phone button,.phone input,.phone-support button")].every(e=>e.disabled)'));
+ }
  await call('Page.removeScriptToEvaluateOnNewDocument',{identifier:injection.identifier});
  console.log('DEMO_FALLBACK_PASS');
+
+ // Static translations and native language links remain usable without scripts.
+ await call('Emulation.setScriptExecutionDisabled',{value:true});
+ await call('Page.navigate',{url:base+'/en/'});await wait('document.documentElement.lang==="en" && document.readyState==="complete"');
+ assert(await evaluate('!window.tangyiDemo && document.querySelector("noscript .disclosure").getBoundingClientRect().height>0'));
+ await click('.language-menu summary');await click('.language-options a[lang="ja"]');await wait('document.documentElement.lang==="ja" && document.readyState==="complete"');
+ assert.equal(await evaluate('document.querySelector("#qa details summary").textContent'),JSON.parse(readFileSync(join(root,'site','locales','ja.json'),'utf8'))['faq.costQ']);
+ assert(await evaluate('!window.tangyiDemo'));
+ await call('Emulation.setScriptExecutionDisabled',{value:false});
+ console.log('DEMO_NO_SCRIPT_TRANSLATIONS_PASS');
  const exceptions=events.filter(e=>e.method==='Runtime.exceptionThrown');assert.equal(exceptions.length,0,JSON.stringify(exceptions));
- writeFileSync(join(out,'report.json'),JSON.stringify({base,results,rendering:rendering.results,fallback:true,contextRecovery:true,exceptions},null,2));
+ writeFileSync(join(out,'report.json'),JSON.stringify({base,results,rendering:rendering.results,fallback:true,contextRecovery:true,noScriptLanguages:true,exceptions},null,2));
  await send('Browser.close');
 }finally{socket?.close();proc.kill();server?.close();}

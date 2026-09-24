@@ -6,7 +6,7 @@
 
 | 範圍 | 驗證方式 | 能證明什麼 | 不能代替什麼 |
 |---|---|---|---|
-| 瀏覽器 Demo | 7 個攝影機模型測試；1440、1061、768、390、320px 互動檢查 | 逐像素遮擋／近裁切、投影、焦段、移動、錄製回放、觸控取消與焦點遺失停止 | Blender 執行效能、手機陀螺儀與私人 Wi-Fi 實測 |
+| 瀏覽器 Demo | 7 個攝影機模型測試；四語 × 1440、1061、768、390、320px 互動檢查 | 逐像素遮擋／近裁切、投影、焦段、移動、錄製回放、觸控取消與焦點遺失停止 | Blender 執行效能、手機陀螺儀與私人 Wi-Fi 實測 |
 | 外掛安全控制 | 12 個 loopback HTTPS／WebSocket 整合測試 | 配對到期／撤銷、限流、Host／Origin、單一控制權、TLS 隔離 | 實體 LAN、憑證手動安裝、手機溫度與長時間錄影 |
 | Blender 0.4.0 RC | 既有 Windows x64 / Blender 4.5.10 LTS、5.1.2 安裝／錄製／輸出驗收 | 發布候選套件在這些版本的已測流程 | 所有 Blender／OS 版本，或 iPhone 正式驗收 |
 
@@ -17,6 +17,7 @@
 需要 Node.js 22+、Python 3.10+、Chrome。
 
 ```sh
+python tools/build_demo.py --check
 node --test test/demo-camera.test.mjs
 python tools/check_docs.py
 node tools/qa-demo.mjs
@@ -25,6 +26,8 @@ node tools/qa-demo.mjs
 `qa-demo.mjs` 會啟動隔離的 loopback 靜態伺服器與全新 Chrome 暫存設定，輸出到 `dist/demo-qa/`。以 `CHROME_PATH` 指定 Chrome 路徑；`QA_OUT` 可指定報告位置；`DEMO_URL` 可檢查已部署的 Demo。它不存取使用者的瀏覽器設定與登入資料。渲染檢查使用 Chrome 隔離設定中的 SwiftShader 軟體渲染，方便無 GPU 的 CI 重現；不能代替真機 GPU 效能驗證。啟動最長等候 30 秒，若失敗會保留 Chrome 的錯誤輸出。
 
 瀏覽器檢查會真的派送滑鼠與觸控輸入，確認：
+- 繁體中文、英文、日文、簡體中文共 20 種語言／尺寸組合；每種語言的錄製提示與錯誤提示正確，語言選單可保留目前段落切換，重新整理維持網址指定語言。
+- 各頁的語言、標題、canonical、hreflang 與 Q&A 導航正確，語言選單不超出螢幕。
 - WebGL 像素檢查：前後提交順序皆正確遮擋、穿越近裁切面的三角形保留可見部分、格線不穿透物件、真實場景的縱向格線保持可見、箱體底面封閉、繪圖環境中斷後重建。
 - WebGL 無法啟用時顯示說明與影片連結，停用無法使用的控制項。另保存場景起始、側面、近距離、低角度與高角度截圖供目視檢查。
 - 拖曳改變視角、搖桿／鍵盤改變位置、焦段改變構圖。
@@ -49,3 +52,9 @@ Windows v0.4.0 安裝包 SHA-256：
 `d7fbf3658294d37ead532a80085512b134581545c2e46dbfd89f2663e6cff20c`
 
 iPhone 仍需親自完成感測器授權、橫向／歸零、斷線、15 分鐘連續操作、錄製與重開輸出。CI 顯示綠燈不代表這些真機項目已完成。
+
+## 多語頁面維護
+
+編輯 `site/index.template.html` 與 `site/locales/*.json`，再執行 `python tools/build_demo.py`。此命令產生繁中首頁、`en/`、`ja/`、`zh-cn/` 靜態頁面、互動訊息模組及 sitemap；CI 的 `--check` 會防止生成內容過期。不要直接修改生成的 HTML 或 `messages.mjs`。
+
+各語言以獨立網址提供完整正文，無 JavaScript 也能閱讀與切換；不依瀏覽器語言強制轉址。語言切換會開啟新頁面並保留所在段落，練習紀錄只在目前頁面的記憶體內。外部 Workshop 六步圖解、影片／圖片與 GitHub 文件保留原語言，在非繁中頁面的相關連結標示中文。

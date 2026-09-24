@@ -4,9 +4,11 @@
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-28734f)](LICENSE)
 [![Release candidate](https://img.shields.io/badge/release-0.4.0--rc.1-e4b535)](https://github.com/tangyistudio/tangyicam/releases/tag/v0.4.0-rc.1)
 
-### [▶ Live Demo — try the camera in your browser](https://tangyistudio.github.io/tangyicam/)
+### [▶ Live Demo — try the camera in your browser](https://tangyistudio.github.io/tangyicam/en/)
 
-[繁體中文](README.zh-TW.md) · [Demo](https://tangyistudio.github.io/tangyicam/) · [Q&A](docs/FAQ.md) · [QA & test scope](docs/QA.md) · [Download](https://workshop.tangyi.mx/tangyicam)
+Demo languages: [繁體中文](https://tangyistudio.github.io/tangyicam/) · [English](https://tangyistudio.github.io/tangyicam/en/) · [日本語](https://tangyistudio.github.io/tangyicam/ja/) · [简体中文](https://tangyistudio.github.io/tangyicam/zh-cn/)
+
+[繁體中文](README.zh-TW.md) · [Demo](https://tangyistudio.github.io/tangyicam/en/) · [Q&A](docs/FAQ.md) · [QA & test scope](docs/QA.md) · [Download](https://workshop.tangyi.mx/tangyicam)
 
 **用手機控制 Blender 攝影機，將運鏡錄成可編輯的 Take。**
 A local-first phone camera controller for Blender, with gyro rotation, joystick movement, shot lists, recording and preview export.
@@ -29,11 +31,11 @@ Tangyi Cam is a free, open-source **Blender add-on for phone-controlled virtual 
 
 ## Try it before installing
 
-[![Browser practice demo: real drag-to-look and focal-length changes, not a Blender connection](docs/images/demo-interaction.webp)](https://tangyistudio.github.io/tangyicam/)
+[![Browser practice demo: real drag-to-look and focal-length changes, not a Blender connection](docs/images/demo-interaction.webp)](https://tangyistudio.github.io/tangyicam/en/)
 
 
 
-The [interactive demo](https://tangyistudio.github.io/tangyicam/) has an original geometric practice scene. Drag the view to look around, use the joystick or WASD to move, change focal length, and record/replay up to 15 seconds of camera movement. On touchscreens, drag the canvas and joystick. Keyboard controls work after focusing the practice area.
+The [interactive demo](https://tangyistudio.github.io/tangyicam/en/) has an original geometric practice scene. Drag the view to look around, use the joystick or WASD to move, change focal length, and record/replay up to 15 seconds of camera movement. On touchscreens, drag the canvas and joystick. Keyboard controls work after focusing the practice area.
 
 **This demo runs entirely in the browser.** It does not connect to Blender, request phone sensor access, install certificates, export MP4 or measure add-on latency. Practice takes live in memory and disappear on reload. It is a way to understand the controls, not evidence of iPhone hardware acceptance.
 
