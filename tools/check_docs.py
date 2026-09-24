@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 from urllib.parse import unquote, urlsplit
 ROOT=Path(__file__).resolve().parents[1]
-paths=[ROOT/'README.md',ROOT/'README.zh-TW.md',*ROOT.joinpath('docs').glob('*.md'),ROOT/'docs/index.html']
+paths=[ROOT/'README.md',ROOT/'README.zh-TW.md',*ROOT.joinpath('docs').glob('*.md'),*ROOT.joinpath('docs').rglob('index.html')]
 for path in paths:
  text=path.read_text(encoding='utf-8')
  links=re.findall(r'(?:href|src)=[\"\']([^\"\']+)',text) if path.suffix=='.html' else re.findall(r'(?<!!)\[[^\]]+\]\(([^)]+)\)|!\[[^\]]*\]\(([^)]+)\)',text)

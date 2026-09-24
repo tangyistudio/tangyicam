@@ -5,6 +5,8 @@
 
 ### [▶ 線上 Demo：先玩鏡頭，再安裝](https://tangyistudio.github.io/tangyicam/)
 
+Demo 語言：[繁體中文](https://tangyistudio.github.io/tangyicam/) · [English](https://tangyistudio.github.io/tangyicam/en/) · [日本語](https://tangyistudio.github.io/tangyicam/ja/) · [简体中文](https://tangyistudio.github.io/tangyicam/zh-cn/)
+
 [English / 雙語主頁](README.md) · [免費下載](https://workshop.tangyi.mx/tangyicam) · [Q&A](docs/FAQ.md) · [驗證狀態](docs/QA.md)
 
 **轉動手機控制方向、推動搖桿移動鏡頭，在自己的 Blender 場景裡找角度與節奏。** 錄下運鏡後，回到 Blender 編輯 Take 與關鍵影格，再輸出預覽 MP4 與首尾 PNG。

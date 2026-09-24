@@ -23,6 +23,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: node --test test/demo-camera.test.mjs
+      - run: python tools/build_demo.py --check
       - run: python tools/check_docs.py
       - name: Desktop and mobile interaction checks
         run: node tools/qa-demo.mjs
