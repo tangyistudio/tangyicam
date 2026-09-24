@@ -1,6 +1,6 @@
 import {initialCamera,move,look,sampleTake,clamp} from './camera.mjs';
-import {createScene} from './scene.mjs';
-import {createRenderer} from './renderer.mjs';
+import {createScene} from './scene.mjs?v=20260924-depth2';
+import {createRenderer} from './renderer.mjs?v=20260924-depth2';
 const $=s=>document.querySelector(s), canvas=$('#scene');
 let camera=initialCamera(),frames=[],mode='idle',started=0,last=0,raf=0,dirty=true,drag=null,padDrag=null;
 const keys=new Set(),held=new Map();let pad={x:0,y:0};
