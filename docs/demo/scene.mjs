@@ -20,8 +20,12 @@ export function createScene() {
   for(const x of [-2,0,2]){box(x,0,1,.15,.8,.15,'#497368');box(x,.8,1,.65,.15,.65,'#e9ac63');}
   for(const x of [-1.5,0,1.5]){box(x,1.45,-.8,.12,.45,.12,'#44855f');box(x,2.9,-2,.65,.2,.65,'#ffd15b');}
   for(const x of [-5,5]){box(x,0,-2,.8,1.2,.8,'#e2a36e');box(x,1.2,-2,1.3,.8,1.3,'#78ac7c');}
-  const line = (a,b) => {for(const p of [a,b]) lines.push(...p,197/255,217/255,200/255);};
-  // A small physical offset keeps the floor grid from fighting the floor surface.
-  for(let i=-10;i<=14;i++){line([i,.003,-10],[i,.003,15]);line([-12,.003,i],[12,.003,i]);}
+  // Thin surface strips clip reliably across camera planes on software and GPU
+  // renderers; long GL_LINES crossing behind the camera vary across drivers.
+  const strip = (x1,z1,x2,z2) => {
+    const p=[[x1,.003,z1],[x2,.003,z1],[x2,.003,z2],[x1,.003,z2]];
+    for(const i of [0,1,2,0,2,3])triangles.push(...p[i],197/255,217/255,200/255);
+  };
+  for(let i=-10;i<=14;i++){strip(i-.008,-10,i+.008,15);strip(-12,i-.008,12,i+.008);}
   return {triangles:new Float32Array(triangles),lines:new Float32Array(lines)};
 }

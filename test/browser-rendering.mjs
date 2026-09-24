@@ -1,6 +1,7 @@
 // Runs inside an isolated browser through qa-demo.mjs, including against live Pages.
 async function checkRendering(moduleBase) {
   const {createRenderer}=await import(moduleBase+'renderer.mjs');
+  const {project}=await import(moduleBase+'camera.mjs');
   const {addBox,createScene}=await import(moduleBase+'scene.mjs');
   const check=(condition,message)=>{if(!condition)throw new Error(message);};
   const camera={x:0,y:0,z:0,yaw:0,pitch:0,focal:35}, results=[], images=[];
@@ -45,11 +46,20 @@ async function checkRendering(moduleBase) {
   }
   // Review evidence from the actual room, including camera limits and strong zoom.
   const canvas=document.createElement('canvas');canvas.width=800;canvas.height=500;
-  const renderer=createRenderer(canvas,createScene());
+  const renderer=createRenderer(canvas,createScene(),{antialias:false});
   try {
     for(const [name,pose] of Object.entries({start:{x:0,y:2.3,z:9,yaw:0,pitch:-.12,focal:35},left:{x:0,y:2.3,z:4,yaw:.75,pitch:-.12,focal:35},close:{x:0,y:1,z:1.5,yaw:.1,pitch:.1,focal:70},low:{x:2,y:.7,z:2,yaw:.4,pitch:.35,focal:18},high:{x:-4,y:5,z:3,yaw:-.3,pitch:-.8,focal:35}})){
       renderer.draw(pose);images.push({name,data:canvas.toDataURL('image/png').split(',')[1]});
     }
+    renderer.draw({x:0,y:2.3,z:9,yaw:0,pitch:-.12,focal:35});
+    const gl=canvas.getContext('webgl');
+    for(const x of [-3,-1,1,3]){
+      const [px,py]=project([x,.003,2.4],{x:0,y:2.3,z:9,yaw:0,pitch:-.12,focal:35},800,500);
+      const pixels=new Uint8Array(5*5*4);gl.readPixels(Math.floor(px)-2,500-Math.floor(py)-2,5,5,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
+      let visible=false;for(let i=0;i<pixels.length;i+=4)if(isColor(pixels.slice(i,i+4),[197,217,200]))visible=true;
+      check(visible,'receding floor grid must remain visible at x='+x);
+    }
+    results.push('floor-grid-visibility');
   } finally {renderer.dispose();}
   return {results,images};
 }
