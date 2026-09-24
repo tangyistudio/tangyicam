@@ -4,11 +4,15 @@ let server;let base=process.env.DEMO_URL;
 if(!base){server=createServer((req,res)=>{const part=decodeURIComponent(new URL(req.url,'http://localhost').pathname),path=resolve(docs,'.'+(part==='/'?'/index.html':part));if(!path.startsWith(docs+sep)){res.writeHead(403).end();return;}try{res.setHeader('Content-Type',({'.html':'text/html; charset=utf-8','.mjs':'text/javascript','.css':'text/css','.jpg':'image/jpeg','.png':'image/png'})[extname(path)]||'application/octet-stream');res.end(readFileSync(path));}catch{res.writeHead(404).end();}});await new Promise(r=>server.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+server.address().port;}
 base=base.replace(/\/$/,'');const profile=mkdtempSync(join(tmpdir(),'tangyicam-demo-qa-'));
 const chrome=process.env.CHROME_PATH||(process.platform==='win32'?'C:/Program Files/Google/Chrome/Application/chrome.exe':'/usr/bin/google-chrome');
-const proc=spawn(chrome,['--headless=new','--disable-gpu','--no-proxy-server','--disable-background-networking','--no-first-run','--no-default-browser-check','--remote-debugging-port=0','--user-data-dir='+profile,...(process.platform==='linux'?['--no-sandbox']:[]),'about:blank'],{windowsHide:true,stdio:'ignore'});
+const proc=spawn(chrome,['--headless=new','--use-gl=angle','--use-angle=swiftshader','--no-proxy-server','--disable-background-networking','--no-first-run','--no-default-browser-check','--remote-debugging-port=0','--user-data-dir='+profile,...(process.platform==='linux'?['--no-sandbox']:[]),'about:blank'],{windowsHide:true,stdio:['ignore','ignore','pipe']});
+let chromeLog='',launchError;proc.stderr.on('data',data=>{chromeLog=(chromeLog+data).slice(-8000);});proc.on('error',error=>{launchError=error;});
 let socket;const events=[];const results=[];let serial=0;const pending=new Map();
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 try {
- for(let i=0;i<100&&!existsSync(join(profile,"DevToolsActivePort"));i++)await sleep(100);
+ for(let i=0;i<300&&!existsSync(join(profile,"DevToolsActivePort"));i++){
+  if(launchError||proc.exitCode!==null||proc.signalCode)break;await sleep(100);
+ }
+ if(!existsSync(join(profile,"DevToolsActivePort")))throw Error('Chrome did not start within 30 seconds: '+(launchError?.message||chromeLog||'no diagnostic output'));
  const port=readFileSync(join(profile,"DevToolsActivePort"),"utf8").split("\n")[0];
  const version=await(await fetch("http://127.0.0.1:"+port+"/json/version")).json();
  socket=new WebSocket(version.webSocketDebuggerUrl);
@@ -43,7 +47,7 @@ try {
   assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth+1'),false);
   const phone=await evaluate('(()=>{const p=document.querySelector(".phone"),r=p.getBoundingClientRect();return {width:r.width,height:r.height,overflow:p.scrollHeight>p.clientHeight+1||p.scrollWidth>p.clientWidth+1}})()');
   assert(phone.width/phone.height>1.9,'phone must remain landscape: '+JSON.stringify(phone));assert.equal(phone.overflow,false);
-  const start=await state(),c=await rect('#scene');
+  const start=await state(),c=await rect('#scene');assert.equal(start.renderer,'webgl','3D renderer must be active');
   if(width<600){await call('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:c.x,y:c.y}]});await call('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:c.x+35,y:c.y-10}]});await call('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
   else{await mouse('mousePressed',c.x,c.y);await mouse('mouseMoved',c.x+50,c.y-10);await mouse('mouseReleased',c.x+50,c.y-10);}
   assert.notEqual((await state()).camera.yaw,start.camera.yaw);
@@ -78,7 +82,27 @@ try {
   }
   await mouse('mouseReleased',area.x,area.y);await click('#record');
  }
+
+ // Context loss must stop active recording in the real UI and recover its controls.
+ await click('#record');
+ await evaluate('window.qaContextLoss=document.querySelector("#scene").getContext("webgl").getExtension("WEBGL_lose_context");window.qaContextLoss.loseContext()');
+ await wait('window.tangyiDemo.snapshot().renderer==="unavailable" && window.tangyiDemo.snapshot().mode==="idle"');assert.equal((await state()).mode,'idle');assert.equal((await state()).heldInputs,0);
+ assert(await evaluate('!document.querySelector("#render-fallback").hidden && document.querySelector("#record").disabled'));
+ await sleep(100);await evaluate('window.qaContextLoss.restoreContext()');await wait('window.tangyiDemo.snapshot().renderer==="webgl"');
+ assert(await evaluate('document.querySelector("#render-fallback").hidden && !document.querySelector("#record").disabled'));await evaluate('delete window.qaContextLoss');
+ console.log('DEMO_UI_CONTEXT_RECOVERY_PASS');
+ const rendering=await evaluate(readFileSync(join(root,'test','browser-rendering.mjs'),'utf8')+'\ncheckRendering('+JSON.stringify(base+'/demo/')+')');
+ for(const {name,data} of rendering.images)writeFileSync(join(out,'scene-'+name+'.png'),Buffer.from(data,'base64'));
+ console.log('DEMO_RENDERING_PASS',rendering.results.join(', '));
+ // Exercise the real UI when WebGL is unavailable, without changing user settings.
+ const injection=await call('Page.addScriptToEvaluateOnNewDocument',{source:`const originalGetContext=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return type==='webgl'?null:originalGetContext.call(this,type,...args);};`});
+ await call('Page.navigate',{url:base+'/'});await wait('!!window.tangyiDemo');
+ assert.equal((await state()).renderer,'unavailable');
+ assert(await evaluate('!document.querySelector("#render-fallback").hidden && !!document.querySelector("#render-fallback a").hash'));
+ assert(await evaluate('[...document.querySelectorAll(".phone button,.phone input,.phone-support button")].every(e=>e.disabled)'));
+ await call('Page.removeScriptToEvaluateOnNewDocument',{identifier:injection.identifier});
+ console.log('DEMO_FALLBACK_PASS');
  const exceptions=events.filter(e=>e.method==='Runtime.exceptionThrown');assert.equal(exceptions.length,0,JSON.stringify(exceptions));
- writeFileSync(join(out,'report.json'),JSON.stringify({base,results,exceptions},null,2));
+ writeFileSync(join(out,'report.json'),JSON.stringify({base,results,rendering:rendering.results,fallback:true,contextRecovery:true,exceptions},null,2));
  await send('Browser.close');
 }finally{socket?.close();proc.kill();server?.close();}
