@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {initialCamera,move,look,project,sampleTake} from '../docs/demo/camera.mjs';
+test('forward movement follows camera heading',()=>{let c=initialCamera();assert(move(c,0,1,0,.05).z<c.z);c.yaw=Math.PI/2;const next=move(c,0,1,0,.05);assert(next.x<c.x);assert(Math.abs(next.z-c.z)<1e-8);});
+test('diagonal movement has same speed as one-axis movement',()=>{const c=initialCamera(),a=move(c,1,0,0,.05),b=move(c,1,1,0,.05);assert(Math.abs(Math.hypot(a.x-c.x,a.z-c.z)-Math.hypot(b.x-c.x,b.z-c.z))<1e-8);});
+test('background time jumps are bounded and camera stays within practice area',()=>{const c=initialCamera();assert.deepEqual(move(c,1,1,0,60),move(c,1,1,0,.05));let next=c;for(let i=0;i<1000;i++)next=move(next,1,1,1,.05);assert(next.x<=6&&next.z>=1.5&&next.y<=5);});
+test('look clamps pitch and preserves position',()=>{const c=initialCamera(),next=look(c,12,9999);assert.equal(next.x,c.x);assert.equal(next.pitch,-.8);assert.notEqual(next.yaw,c.yaw);});
+test('camera centre and zoom preserve perspective',()=>{const c={...initialCamera(),y:0,pitch:0};assert.deepEqual(project([0,0,0],c,1000,600),[500,300,9]);const a=project([1,0,0],c,1000,600),b=project([1,0,0],{...c,focal:70},1000,600);assert(Math.abs(b[0]-500-2*(a[0]-500))<1e-8);});
+test('points behind camera do not project',()=>{const c={...initialCamera(),pitch:0};assert.equal(project([0,2,20],c,1000,600),null);});
+test('take interpolation preserves endpoints and focal length',()=>{const a=initialCamera(),b={...a,x:4,focal:70},frames=[{t:0,camera:a},{t:1000,camera:b}];assert.equal(sampleTake([],0),null);assert.deepEqual(sampleTake(frames,-1),a);assert.deepEqual(sampleTake(frames,2000),b);assert.equal(sampleTake(frames,500).x,2);assert.equal(sampleTake(frames,500).focal,52.5);});

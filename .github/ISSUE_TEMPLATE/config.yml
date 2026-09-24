@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Q&A and troubleshooting / 常見問題與排錯
+    url: https://github.com/tangyistudio/tangyicam/blob/main/docs/FAQ.md
+    about: Start here for installation and connection questions.
+  - name: Security reports / 安全問題
+    url: https://github.com/tangyistudio/tangyicam/blob/main/SECURITY.md
+    about: Do not disclose pairing secrets or private keys in a public issue.
