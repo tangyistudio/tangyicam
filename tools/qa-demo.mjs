@@ -36,11 +36,13 @@ try {
  const click=selector=>evaluate('document.querySelector('+JSON.stringify(selector)+').click()');
  const rect=selector=>evaluate('(()=>{const e=document.querySelector('+JSON.stringify(selector)+');e.scrollIntoView({block:"center",behavior:"instant"});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height}})()');
  const mouse=(type,x,y)=>call('Input.dispatchMouseEvent',{type,x,y,button:'left',buttons:type==='mouseReleased'?0:1,clickCount:1});
- for(const width of [1440,390]){
+ for(const width of [1440,1061,768,390,320]){
   await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<600});
   await call('Emulation.setTouchEmulationEnabled',{enabled:width<600});
   await call('Page.navigate',{url:base+'/'});await wait('!!window.tangyiDemo');await sleep(100);
   assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth+1'),false);
+  const phone=await evaluate('(()=>{const p=document.querySelector(".phone"),r=p.getBoundingClientRect();return {width:r.width,height:r.height,overflow:p.scrollHeight>p.clientHeight+1||p.scrollWidth>p.clientWidth+1}})()');
+  assert(phone.width/phone.height>1.9,'phone must remain landscape: '+JSON.stringify(phone));assert.equal(phone.overflow,false);
   const start=await state(),c=await rect('#scene');
   if(width<600){await call('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:c.x,y:c.y}]});await call('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:c.x+35,y:c.y-10}]});await call('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
   else{await mouse('mousePressed',c.x,c.y);await mouse('mouseMoved',c.x+50,c.y-10);await mouse('mouseReleased',c.x+50,c.y-10);}
@@ -60,7 +62,7 @@ try {
   await click('#reset');await rect('#scene');await sleep(80);
   const shot=await call('Page.captureScreenshot',{format:'png'});writeFileSync(join(out,'demo-'+width+'.png'),Buffer.from(shot.data,'base64'));
   await evaluate('document.querySelector("#qa").scrollIntoView();document.querySelector("details").open=true');assert(await evaluate('document.querySelector("details").open'));assert.equal(await evaluate('document.querySelectorAll("details").length'),11);
-  results.push({width,touch:width<600,drag:true,joystick:true,cancelStops:true,focal:true,recordReplay:true,blurStops:true,keyboard:true,faqCount:11,overflow:false});console.log('DEMO_BROWSER_PASS',width);
+  results.push({width,touch:width<600,drag:true,joystick:true,cancelStops:true,focal:true,recordReplay:true,blurStops:true,keyboard:true,faqCount:11,phoneAspect:phone.width/phone.height,overflow:false});console.log('DEMO_BROWSER_PASS',width);
  }
  if(process.env.DEMO_CAPTURE==='1'){
   await call('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});await call('Emulation.setTouchEmulationEnabled',{enabled:false});

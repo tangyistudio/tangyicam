@@ -22,7 +22,7 @@ function draw(){const w=canvas.width,h=canvas.height;ctx.fillStyle='#e4f2ed';ctx
 }
 function resize(){const r=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(r.width*ratio);canvas.height=Math.round(r.height*ratio);dirty=true;wake();}
 function announce(s){status.textContent=s;}
-function updateButtons(){$('#record').textContent=mode==='recording'?'■ 停止錄製':'● 錄製練習';$('#record').setAttribute('aria-pressed',String(mode==='recording'));$('#replay').disabled=frames.length<2||mode==='recording';$('#replay').textContent=mode==='replay'?'■ 停止回放':'▶ 回放運鏡';}
+function updateButtons(){$('#record').textContent=mode==='recording'?'■ 停止':'● 錄製';$('#record').setAttribute('aria-pressed',String(mode==='recording'));$('#replay').disabled=frames.length<2||mode==='recording';$('#replay').textContent=mode==='replay'?'■ 停止':'▶ 回放';}
 function clearInput(){keys.clear();held.clear();pad={x:0,y:0};drag=null;padDrag=null;thumb.style.transform='translate(0,0)';}
 function stop(message){if(mode==='recording'&&frames.length)frames.push({t:performance.now()-started,camera:{...camera}});mode='idle';clearInput();updateButtons();if(message)announce(message);dirty=true;wake();}
 function changeCamera(next){if(mode==='replay')stop('回放已停止，可繼續操作。');camera=next;dirty=true;wake();}
