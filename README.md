@@ -1,11 +1,23 @@
-# Tangyi Cam
+# Tangyi Cam — Phone Virtual Camera for Blender
 
-**用手機控制 Blender 攝影機，將運鏡錄成可編輯的 Take。**  
+**用手機控制 Blender 攝影機，將運鏡錄成可編輯的 Take。**
 A local-first phone camera controller for Blender, with gyro rotation, joystick movement, shot lists, recording and preview export.
 
 [免費下載 / 安裝教學](https://workshop.tangyi.mx/tangyicam) · [作品示範](https://workshop.tangyi.mx/resources) · [Release notes](docs/CHANGELOG.md)
 
 > **0.4.0 release candidate.** Windows x64 / Blender 4.5.10 and 5.1.2 installation, recording and export have been tested. iPhone Safari hardware acceptance is still pending. This is not a stable-release claim.
+
+[![Tangyi Cam — use a phone to control a Blender virtual camera; SECONDHAND 3D and simulated phone-control demo](docs/images/tangyicam-phone-blender.jpg)](https://workshop.tangyi.mx/tangyicam)
+
+**[Watch the 30-second camera-control demo](https://media.tangyi.mx/opensource/20260924/tangyicam-secondhand-30s.mp4)** · [Product story / 作品發表](https://tangyi.mx/blog/tangyicam-phone-controlled-blender-camera)
+
+The demo uses SECONDHAND 3D scenes, simplified software UI and simulated phone operation. It is not an iPhone hardware recording; film assets are not included in the download.
+
+## Blender 手機運鏡外掛 / Virtual camera workflow
+
+Tangyi Cam is a free, open-source **Blender add-on for phone-controlled virtual cinematography and previs**. Use a mobile browser to rotate the camera, move with on-screen joysticks, adjust focal length and save editable camera takes. Camera control runs locally on your private Wi-Fi.
+
+用手機掌握 3D 場景裡的角度、移動與焦段，錄下運鏡後回到 Blender 編輯關鍵影格。適合鏡頭預演與拍攝路線練習；不需要 LLM，也不會自動生成 3D 場景。
 
 ## What it does
 
@@ -29,6 +41,20 @@ A local-first phone camera controller for Blender, with gyro rotation, joystick 
 [繁體中文完整安裝與排錯](docs/RELEASE_README.md) · [Privacy](docs/PRIVACY.md) · [Device acceptance checklist](docs/TESTING.md)
 
 Recording is camera motion, not live microphone audio. An export creates a new folder beside the blend file (`tc_export`), or in `Documents/TangyiCam/Exports` for an unsaved scene. The download does not include SECONDHAND film scenes or assets.
+
+## FAQ / 常見問題
+
+**Does it need a phone app or a paid account? / 要安裝手機 App 或付費嗎？**
+No native phone app, Workshop account or cloud credits are required. The Blender add-on is free under GPL-3.0-or-later. First use requires the documented local HTTPS certificate setup.
+
+**Does walking with the phone move the camera? / 手機走動能追蹤位置嗎？**
+No. DeviceOrientation controls rotation; joysticks control translation. This is not physical 6DOF tracking. Scene complexity, hardware and network affect preview performance.
+
+**What does recording export? / 可輸出什麼？**
+Editable camera takes, preview MP4, `first.png` and `last.png`. Camera motion is recorded; phone microphone audio is not.
+
+**Which platforms are verified? / 哪些環境已驗證？**
+Windows x64 with Blender 4.5.10 LTS and 5.1.2 installation, recording and export have been tested. iPhone Safari hardware acceptance remains pending. Android, macOS and Linux are not verified release targets.
 
 ## Develop and verify
 
